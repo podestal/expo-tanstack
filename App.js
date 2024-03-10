@@ -1,18 +1,30 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Button } from 'react-native';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
 
 
 const client = new QueryClient()
 
 const TodosList = () => {
 
-  const {data: services, error, isError, isLoading} = useQuery({
+  const [title, setTitle] = useState('')
+
+  const {data: todos, error, isError, isLoading} = useQuery({
     queryKey: ['todos'],
-    queryFn: () => axios.get('https://share-api-ic9f.vercel.app/api/services/'),
+    queryFn: () => axios.get('http://127.0.0.1:8000/api/todos/'),
   })
+
+  const {mutate: addTodoMutation} = useMutation({
+    mutationFn: (todo) => axios.post('http://127.0.0.1:8000/api/todos/', todo),
+    onSuccess: client.invalidateQueries(['todos'])
+  })
+
+  const handleAddTodo = () => {
+    addTodoMutation({ title })
+    setTitle('')
+  }
 
   if (isLoading) return (
     <View style={styles.container}>
@@ -28,7 +40,14 @@ const TodosList = () => {
 
   return (
     <View style={styles.container}>
-      {services && services.data.map( service => <Text key={service.id}>{service.platform}</Text>)}
+      <Text style={styles.label}>New Todo</Text>
+      <TextInput 
+        style={styles.input}
+        value={title}
+        onChangeText={value => setTitle(value)}
+      />
+      <Button onPress={handleAddTodo} title='Add'/>
+      {todos && todos.data.map( todo => <Text key={todo.id}>{todo.title}</Text>)}
     </View>
   )
 }
@@ -51,4 +70,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  label: {
+    fontSize: 20,
+
+  },
+  input: {
+    backgroundColor: '#ecf0f1',
+    width: '40%',
+    marginVertical: 15,
+    padding: 5,
+    borderRadius: 20,
+    textAlign: 'center'
+  },
+  button: {
+    marginVertical: 30
+  }
 });
